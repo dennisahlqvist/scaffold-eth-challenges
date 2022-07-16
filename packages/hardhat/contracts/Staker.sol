@@ -11,13 +11,17 @@ contract Staker {
   uint256 public constant threshold = 1 ether;
   mapping ( address => uint256 ) public balances;
   
+  bool public stakingOpen = true;
   bool public openForWithdraw = false;
   
   event Stake(address,uint256);
 
+
+
+
   constructor(address exampleExternalContractAddress) {
       exampleExternalContract = ExampleExternalContract(exampleExternalContractAddress);
-      deadline = block.timestamp + 30 seconds;
+      deadline = block.timestamp + 72 hours;
   }
 
   // Collect funds in a payable `stake()` function and track individual `balances` with a mapping:
@@ -31,8 +35,9 @@ contract Staker {
   // After some `deadline` allow anyone to call an `execute()` function
   // If the deadline has passed and the threshold is met, it should call `exampleExternalContract.complete{value: address(this).balance}()`
 
-  function execute() public{
-    //require();
+  function execute() public {
+    require(stakingOpen);
+    stakingOpen = false;
     if(address(this).balance>=threshold){
       exampleExternalContract.complete{value: address(this).balance}();
     }else{
@@ -44,6 +49,12 @@ contract Staker {
 
 
   // Add a `withdraw()` function to let users withdraw their balance
+    function withdraw() public {
+      require(openForWithdraw,"Call execute() first" );
+      uint balanceToSend = balances[msg.sender];
+      balances[msg.sender] = 0;
+      payable(msg.sender).transfer(balanceToSend);
+    }
 
 
   // Add a `timeLeft()` view function that returns the time left before the deadline for the frontend
@@ -57,6 +68,12 @@ contract Staker {
 
 
   // Add the `receive()` special function that receives eth and calls stake()
+
+    receive() external payable {
+      stake();
+    }
+
+
 
 
 }
